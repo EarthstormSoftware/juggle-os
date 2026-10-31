@@ -499,8 +499,12 @@ Plan (2026-10-31). v1.0 freezes [the app contract](app-contract.md): 1.x release
   freeze but its texts (frozen at 1.0, every request since 1.0). An app installed before v1.0 without `juggle` isn't
   started; installed again with it, it's the same app and keeps its state (the image reviewer found it would have
   been emptied). Checked in QEMU, which also installs such an app again.
-- **The release** (`/release v1.0.0`, `/publish-release`, the website). Juggle Unicorn and its repo can go public
-  with it (after `/check-public`).
+- **The release** (`/release v1.0.0`, `/publish-release`, the website).
+- **The apps after it** (decided 2026-10-31), in their own repos: Juggle Hello and Pico Hello 1.0 (the two
+  templates, checked on the released OS); then App Base 1.0, once Juggle Hello and Juggle Unicorn run the same
+  version and its API has been read through as the contract was (it must still fit the smallest Pico); and Juggle
+  Unicorn public at 0.x (after `/check-public` on its history), with its 1.0 once its modes are done. PlasmaStick
+  and Pico PIR are already 2.0 on App Base.
 - **A soak test after v1.0** (decided 2026-10-31: not a big risk for the release): the test Pi runs its app for
   several days, comparing memory, disk space, the logs' size and the clock at the start and the end.
 
