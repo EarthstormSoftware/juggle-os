@@ -489,7 +489,16 @@ Plan (2026-10-31). v1.0 freezes [the app contract](app-contract.md): 1.x release
   say which Juggle OS it needs is refused, with a message saying so (checked in QEMU). Juggle Hello and Juggle
   Unicorn already say `"juggle": "1.0"`.
 - **The failure tests again** on the release candidate, on the Pi 2: a hang and a kernel panic during a trial
-  update, and the power pulled during a trial boot, while running and early in a boot.
+  update, and the power pulled during a trial boot, while running and early in a boot. Done (2026-10-31, with
+  v0.8.0-1-g5d30c30 and Juggle Hello): updated to it and kept, all the checks passed (the new one included: refused
+  installs left the app as it was); a panic and a hang during trial updates each came back on it by itself, and
+  `juggle update` said why; after the power pulled during a trial boot, while running and early in a boot, it came
+  back each time on its permanent slot, the data partition mounted with nothing to recover, and all the checks passed
+  again.
+- **`juggle` required, and the contract read through**: done (2026-10-31). Nothing needed changing before the
+  freeze but its texts (frozen at 1.0, every request since 1.0). An app installed before v1.0 without `juggle` isn't
+  started; installed again with it, it's the same app and keeps its state (the image reviewer found it would have
+  been emptied). Checked in QEMU, which also installs such an app again.
 - **The release** (`/release v1.0.0`, `/publish-release`, the website). Juggle Unicorn and its repo can go public
   with it (after `/check-public`).
 - **A soak test after v1.0** (decided 2026-10-31: not a big risk for the release): the test Pi runs its app for
