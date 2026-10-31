@@ -4,8 +4,8 @@ What a Juggle app can rely on: how it's installed and run, what it may read and 
 what it may ask the OS for. From v1.0 this is what Juggle OS's version number protects. Everything not written here
 (the card layout, the A/B slots, `os-update`, the setup page, the login screens) may change in any release.
 
-**Status: draft for v1.0.** The changes it needed are in v0.7.0 (see Before v1); one switch is left
-for v1.0 itself.
+**Status: Juggle 1.0, frozen from Juggle OS v1.0.** 1.x releases only add to it (see Versions); what led up to it is
+under Before v1.
 
 ## Versions
 
@@ -40,7 +40,7 @@ In the app's folder, beside `main.py`:
 
 | Setting | Required | Meaning |
 |---|---|---|
-| `juggle` | yes (from v1.0) | The contract the app needs, `"MAJOR.MINOR"`. Refused if the OS's major differs, or its minor is lower. |
+| `juggle` | yes | The contract the app needs, `"MAJOR.MINOR"`. Refused if the OS's major differs, or its minor is lower. |
 | `name` | yes | Lowercase letters, digits and hyphens, 1 to 32, not starting or ending with a hyphen. Installing an app with another name starts it with empty state. |
 | `version` | yes | Letters, digits and `.` `_` `+` `-`, up to 32. Shown on the login screens and to the app's own update. |
 | `root` | no (false) | Run as root, for libraries that need `/dev/mem` (`rpi_ws281x`). Otherwise the app runs as the `app` user. |
@@ -105,18 +105,21 @@ is checked by the OS.
 - Exit status 1: refused or failed, with the reason (one line, for people) on standard error.
 - Exit status 2: a request this OS doesn't know, or the wrong arguments.
 
+Since: the contract that has it, which an app using it says it needs. All of these are in 1.0 (before v1.0 they came
+in Juggle OS 0.4 to 0.6).
+
 | Request | Since | What it does | Answer |
 |---|---|---|---|
-| `update` | 0.4 | Installs `/data/app-state/update.tar` (a `.tar` of the app's folder, up to 64 MiB) as a new version, on trial: in the background, the app is restarted with it, and the old version goes back if the new one doesn't keep running for 30 seconds. | `update-result.json` afterwards |
-| `time-zone <zone>` | 0.4 | Sets the time zone (an IANA name, such as `Europe/London`), at once and at every start | |
-| `ntp <server>` | 0.4 | Sets the time server (`""` for the default) | |
-| `restart` | 0.4 | Restarts the Pi | |
-| `settings` | 0.5 | The Pi's settings | `{"time_zone", "ntp", "wifi_fallback": {"enabled", "after_minutes", "for_minutes"}, "wifi_ssid"}` (`wifi_ssid` null on Ethernet) |
-| `wifi-fallback <on\|off> <after> <for>` | 0.5 | Whether the Pi starts setup mode when it has no network, after how many minutes (1 to 1440) and for how many (5 to 120), from the next start | |
-| `setup` | 0.5 | Restarts into setup mode, keeping the settings until new ones are saved there | |
-| `factory-reset` | 0.5 | Forgets the Pi's settings (name, Wi-Fi, SSH keys, time zone) and restarts into setup mode. The app and its state stay. | |
-| `wifi <ssid> [<country>]` | 0.6 | A new Wi-Fi network from the next start, the password on standard input (one line). On trial: if it doesn't connect within 5 minutes, the network before goes back. The app asks for the restart. | |
-| `networks` | 0.6 | The Wi-Fi networks in range | a JSON list of names, strongest first |
+| `update` | 1.0 | Installs `/data/app-state/update.tar` (a `.tar` of the app's folder, up to 64 MiB) as a new version, on trial: in the background, the app is restarted with it, and the old version goes back if the new one doesn't keep running for 30 seconds. | `update-result.json` afterwards |
+| `time-zone <zone>` | 1.0 | Sets the time zone (an IANA name, such as `Europe/London`), at once and at every start | |
+| `ntp <server>` | 1.0 | Sets the time server (`""` for the default) | |
+| `restart` | 1.0 | Restarts the Pi | |
+| `settings` | 1.0 | The Pi's settings | `{"time_zone", "ntp", "wifi_fallback": {"enabled", "after_minutes", "for_minutes"}, "wifi_ssid"}` (`wifi_ssid` null on Ethernet) |
+| `wifi-fallback <on\|off> <after> <for>` | 1.0 | Whether the Pi starts setup mode when it has no network, after how many minutes (1 to 1440) and for how many (5 to 120), from the next start | |
+| `setup` | 1.0 | Restarts into setup mode, keeping the settings until new ones are saved there | |
+| `factory-reset` | 1.0 | Forgets the Pi's settings (name, Wi-Fi, SSH keys, time zone) and restarts into setup mode. The app and its state stay. | |
+| `wifi <ssid> [<country>]` | 1.0 | A new Wi-Fi network from the next start, the password on standard input (one line). On trial: if it doesn't connect within 5 minutes, the network before goes back. The app asks for the restart. | |
+| `networks` | 1.0 | The Wi-Fi networks in range | a JSON list of names, strongest first |
 
 ## Installing and removing (for deploy tools)
 
@@ -134,7 +137,7 @@ splash, which services run, the packages beyond Python and the libraries above, 
 
 ## Before v1
 
-Changes made before the contract is frozen, because they can't be added later without breaking something:
+Changes made before the contract was frozen, because they couldn't be added later without breaking something:
 
 1. **`juggle` in `app.json`**, checked as above (the `app` command's `check_juggle`). Without it, an OS can't tell
    an app made for a later 1.x from one it can run, and the first app to use something new would fail at runtime
@@ -148,9 +151,11 @@ Changes made before the contract is frozen, because they can't be added later wi
 4. **Exit status 2 for an unknown request**, kept as it was, written down (above) so App Base can tell "not on this
    OS" from "refused".
 
-Left for v1.0 itself: `JUGGLE_REQUIRED` in the `app` command becomes true, so an `app.json` without `juggle` is
-refused. Until then it's taken, so apps from before it keep running while they gain it (an OS before this one
-refuses `juggle` as a setting it doesn't know, so an app adds it only once its Pis have this OS).
+5. **`juggle` required from v1.0** (`JUGGLE_REQUIRED` in the `app` command): an `app.json` without it is refused.
+   From v0.7.0 to v0.8.0 it was taken, so apps from before it kept running while they gained it (an OS before
+   v0.7.0 refuses `juggle` as a setting it doesn't know, so an app added it once its Pis had v0.7.0). An app still
+   without it isn't started on v1.0 (the login screens say why); installed again with it, it's the same app, and
+   keeps its state.
 
 ## Later (minor releases)
 

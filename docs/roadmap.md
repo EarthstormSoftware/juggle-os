@@ -479,6 +479,22 @@ with `juggle.json` skips setup mode.
   put back in about 6 minutes, the right one kept, the scan, and the app's page changing the network. Released in
   v0.6.0 (2026-10-29).
 
+### 8. v1.0
+
+Plan (2026-10-31). v1.0 freezes [the app contract](app-contract.md): 1.x releases only add to it.
+
+- **The contract read through** once more, for anything that would be hard to change after the freeze. What it
+  lists for later (audio, the display, I2C and SPI, more requests) can come in 1.x.
+- **`juggle` in `app.json` required**: `JUGGLE_REQUIRED` in the `app` command becomes true, so an app that doesn't
+  say which Juggle OS it needs is refused, with a message saying so (checked in QEMU). Juggle Hello and Juggle
+  Unicorn already say `"juggle": "1.0"`.
+- **The failure tests again** on the release candidate, on the Pi 2: a hang and a kernel panic during a trial
+  update, and the power pulled during a trial boot, while running and early in a boot.
+- **The release** (`/release v1.0.0`, `/publish-release`, the website). Juggle Unicorn and its repo can go public
+  with it (after `/check-public`).
+- **A soak test after v1.0** (decided 2026-10-31: not a big risk for the release): the test Pi runs its app for
+  several days, comparing memory, disk space, the logs' size and the clock at the start and the end.
+
 ## Then
 
 - **HTTPS for apps** (after v1, optional): the app's page over HTTPS, so its web password (HTTP Basic auth) isn't

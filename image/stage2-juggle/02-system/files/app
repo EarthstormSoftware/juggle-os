@@ -43,8 +43,8 @@ KEYS = {"juggle", "name", "version", "root", "pwm"}
 # The Juggle OS version this OS gives apps (docs/app-contract.md): the MAJOR.MINOR of the release that last added to
 # what apps can rely on. Raised in the release that adds something.
 JUGGLE = "1.0"
-# Until v1.0, an app.json without "juggle" is still taken, so apps from before it run while they gain it
-JUGGLE_REQUIRED = False
+# From v1.0, an app.json must say which Juggle OS it needs ("juggle"): apps from before it were taken until then
+JUGGLE_REQUIRED = True
 LEVEL = re.compile(r"(0|[1-9][0-9]{0,3})\.(0|[1-9][0-9]{0,3})")
 # The onboard (headphone) audio's driver, which uses the PWM hardware
 AUDIO_MODULE = "snd_bcm2835"
@@ -197,13 +197,24 @@ def start_and_check(seconds):
                           capture_output=True, text=True).stdout.rstrip()
 
 
+def installed():
+    """The installed app's (name, version), from its app.json as it is, unchecked ((None, None) without one): an app
+    this OS refuses to start (one from before v1.0 that doesn't say which Juggle OS it needs) is still the same app,
+    and keeps its state when a version this OS takes is installed."""
+    try:
+        data = json.loads((APP / "app.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError, UnicodeError):
+        return None, None
+    if not isinstance(data, dict):
+        return None, None
+    name, version = data.get("name"), data.get("version")
+    return name if isinstance(name, str) else None, version if isinstance(version, str) else None
+
+
 def install(archive):
     new, name, version = unpack(archive)
     old = APP.with_name("app.old")
-    try:
-        previous = manifest(APP)[0] if APP.exists() else None
-    except AppError:
-        previous = None
+    previous = installed()[0]
     systemctl("stop", SERVICE)
     if APP.exists():
         os.rename(APP, old)
@@ -237,10 +248,7 @@ def trial(archive):
     except AppError as error:
         report(None, False, str(error))
         raise
-    try:
-        current, current_version, *_ = manifest(APP)
-    except AppError:
-        current = current_version = None
+    current, current_version = installed()
     if name != current:
         shutil.rmtree(new, ignore_errors=True)
         message = f"Not installed: it's {name}, not {current} (a different app is installed with its deploy.ps1)."
@@ -273,11 +281,7 @@ def remove():
     systemctl("stop", SERVICE)
     systemctl("reset-failed", SERVICE, check=False)
     if APP.exists():
-        name = None
-        try:
-            name = manifest(APP)[0]
-        except AppError:
-            pass
+        name = installed()[0]
         shutil.rmtree(APP)
         say(f"Removed {name or 'the app'}")
     else:

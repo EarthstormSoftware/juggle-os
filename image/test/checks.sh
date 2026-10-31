@@ -173,6 +173,55 @@ sudo_works() {
 	sudo -n true
 }
 
+# Installing an app from an app.json, which must be refused with a reason containing the text given. A refused app is
+# checked before the installed one is touched.
+refused() {
+	local dir out
+	dir=$(mktemp -d)
+	trap 'rm -rf "$dir" "$dir.tar"; trap - RETURN' RETURN
+	echo 'print("never run")' > "$dir/main.py"
+	echo "$1" > "$dir/app.json"
+	tar -cf "$dir.tar" -C "$dir" main.py app.json || return 1
+	if out=$(sudo -n /usr/lib/juggle/app install "$dir.tar" 2>&1); then
+		echo "installed $1"
+		return 1
+	fi
+	grep -qF "$2" <<< "$out" || { echo "refused $1 with: $out"; return 1; }
+}
+
+# Every file of the installed app, with its checksum
+app_files() {
+	sudo -n find /data/app -type f -exec sha256sum {} + 2> /dev/null | sort
+}
+
+# An app must say which Juggle OS it needs (the app contract, from v1.0), and one that needs a later one is refused;
+# the installed app (if there is one) stays as it was
+juggle_needed() {
+	local before
+	before=$(app_files)
+	refused '{"name": "versionless", "version": "1"}' "doesn't say which Juggle OS it needs" || return 1
+	refused '{"juggle": "9.0", "name": "later", "version": "1"}' "needs Juggle 9.0 or later" || return 1
+	[ "$(app_files)" = "$before" ] || { echo "the installed app changed"; return 1; }
+}
+
+# In QEMU only, as it replaces the app: an app from before v1.0 (no "juggle", which this OS won't start) installed
+# again with it is the same app, and keeps its state
+juggle_added() {
+	local dir out
+	dir=$(mktemp -d)
+	trap 'rm -rf "$dir" "$dir.tar"; trap - RETURN' RETURN
+	sudo -n mkdir -p /data/app /data/app-state || return 1
+	echo '{"name": "keeper", "version": "0.9"}' | sudo -n tee /data/app/app.json > /dev/null
+	echo 'print("from before v1.0")' | sudo -n tee /data/app/main.py > /dev/null
+	echo kept | sudo -n tee /data/app-state/marker > /dev/null
+	printf 'import time\nwhile True:\n    time.sleep(60)\n' > "$dir/main.py"
+	echo '{"juggle": "1.0", "name": "keeper", "version": "1.0"}' > "$dir/app.json"
+	tar -cf "$dir.tar" -C "$dir" main.py app.json || return 1
+	out=$(sudo -n /usr/lib/juggle/app install "$dir.tar" 2>&1) || { echo "not installed: $out"; return 1; }
+	[ "$(sudo -n cat /data/app-state/marker 2> /dev/null)" = kept ] || { echo "its state is gone: $out"; return 1; }
+	sudo -n /usr/lib/juggle/app remove > /dev/null 2>&1 || { echo "it couldn't be removed again"; return 1; }
+}
+
 # The app user may run app-request as root, and nothing else; it answers, and refuses what it shouldn't do
 app_requests() {
 	local rights
@@ -213,5 +262,7 @@ check login_screens "login screens show the slot and the app"
 check app "the app runs, answers and is given JUGGLE (if there is one)"
 check libraries "the libraries for apps import, audio as the app needs"
 check sudo_works "sudo works for the admin user"
+check juggle_needed "an app that doesn't say which Juggle OS it needs, or needs a later one, isn't installed"
+[ "$mode" = qemu ] && check juggle_added "an app from before v1.0 installed again with juggle keeps its state"
 check app_requests "the app may ask app-request, and only that"
 exit $result
