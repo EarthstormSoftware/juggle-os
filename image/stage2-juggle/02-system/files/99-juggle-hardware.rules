@@ -3,3 +3,5 @@ SUBSYSTEM=="gpio", KERNEL=="gpiochip*", GROUP="gpio", MODE="0660"
 KERNEL=="gpiomem", GROUP="gpio", MODE="0660"
 SUBSYSTEM=="i2c-dev", GROUP="i2c", MODE="0660"
 SUBSYSTEM=="spidev", GROUP="spi", MODE="0660"
+# The display's backlight (the official Touch Display's), so an app that draws on the screen can dim it and switch it off
+SUBSYSTEM=="backlight", RUN+="/bin/chgrp video /sys%p/brightness /sys%p/bl_power", RUN+="/bin/chmod g+w /sys%p/brightness /sys%p/bl_power"

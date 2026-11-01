@@ -157,6 +157,7 @@ except OSError as error:
 # The compiled libraries for apps import, and the onboard audio is loaded unless the app uses the PWM hardware
 libraries() {
 	python3 -c 'import rpi_ws281x' || return 1
+	python3 -c 'from PIL import Image, ImageDraw, ImageFont; ImageFont.load_default(24)' || return 1
 	# QEMU's machine has no Pi audio hardware, so the driver can't load there
 	[ "$mode" = qemu ] && return 0
 	local pwm loaded
@@ -222,6 +223,37 @@ juggle_added() {
 	sudo -n /usr/lib/juggle/app remove > /dev/null 2>&1 || { echo "it couldn't be removed again"; return 1; }
 }
 
+# In QEMU only, as it replaces the app: an app that draws on the screen (display, from Juggle 1.1) has it to itself
+# while it runs, and the console has it back once the app is removed
+display_app() {
+	local dir out
+	dir=$(mktemp -d)
+	trap 'rm -rf "$dir" "$dir.tar"; trap - RETURN' RETURN
+	printf 'import time
+while True:
+    time.sleep(60)
+' > "$dir/main.py"
+	echo '{"juggle": "1.1", "name": "drawer", "version": "1.0", "display": true}' > "$dir/app.json"
+	tar -cf "$dir.tar" -C "$dir" main.py app.json || return 1
+	out=$(sudo -n /usr/lib/juggle/app install "$dir.tar" 2>&1) || { echo "not installed: $out"; return 1; }
+	[ -e /run/juggle/display ] || { echo "the screen isn't the app's"; return 1; }
+	systemctl -q is-active getty@tty1 juggle-console-logo && { echo "the console still runs"; return 1; }
+	sudo -n /usr/lib/juggle/app remove > /dev/null 2>&1 || { echo "it couldn't be removed again"; return 1; }
+	[ ! -e /run/juggle/display ] || { echo "the screen is still the app's"; return 1; }
+	local i
+	for i in 1 2 3 4 5 6 7 8 9 10; do systemctl -q is-active getty@tty1 && return 0; sleep 1; done
+	echo "the login screen didn't come back"; return 1
+}
+
+# The display's backlight (if there is one) is the app user's to dim and switch off
+backlight() {
+	local light
+	for light in /sys/class/backlight/*; do
+		[ -e "$light/brightness" ] || continue
+		sudo -n -u app test -w "$light/brightness" -a -w "$light/bl_power" || { echo "the app can't change $light"; return 1; }
+	done
+}
+
 # The app user may run app-request as root, and nothing else; it answers, and refuses what it shouldn't do
 app_requests() {
 	local rights
@@ -283,6 +315,8 @@ check libraries "the libraries for apps import, audio as the app needs"
 check sudo_works "sudo works for the admin user"
 check juggle_needed "an app that doesn't say which Juggle OS it needs, or needs a later one, isn't installed"
 [ "$mode" = qemu ] && check juggle_added "an app from before v1.0 installed again with juggle keeps its state"
+[ "$mode" = qemu ] && check display_app "an app that draws on the screen has it to itself, and gives it back"
 check app_requests "the app may ask app-request, and only that"
 check display_rotation "the app may turn the display, into the boot files and back"
+check backlight "the app may dim and switch off the display (if there is one)"
 exit $result

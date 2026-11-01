@@ -1,0 +1,3 @@
+# Pillow, for apps that draw on the screen (the app's manifest's display): images, shapes and anti-aliased text, which
+# the app writes to the framebuffer. pygame's SDL and Mesa would add about 240 MB; Pillow adds about 6.
+python3-pil

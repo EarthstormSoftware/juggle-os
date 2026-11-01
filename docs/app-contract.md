@@ -5,7 +5,7 @@ what it may ask the OS for. From v1.0 this is what Juggle OS's version number pr
 (the card layout, the A/B slots, `os-update`, the setup page, the login screens) may change in any release.
 
 **Status: Juggle 1.1.** Frozen at 1.0 from Juggle OS v1.0: 1.x releases only add to it (see Versions), and 1.1 adds
-the display's rotation. What led up to 1.0 is under Before v1.
+the display (an app may draw on it, with Pillow, and turn it). What led up to 1.0 is under Before v1.
 
 ## Versions
 
@@ -45,6 +45,7 @@ In the app's folder, beside `main.py`:
 | `version` | yes | Letters, digits and `.` `_` `+` `-`, up to 32. Shown on the login screens and to the app's own update. |
 | `root` | no (false) | Run as root, for libraries that need `/dev/mem` (`rpi_ws281x`). Otherwise the app runs as the `app` user. |
 | `pwm` | no (false) | The app uses the PWM hardware (WS2812 LEDs on GPIO 18). The onboard audio uses it too, so its driver is unloaded while the app runs. |
+| `display` | no (false) | Since 1.1: the app draws on the screen itself (see Hardware). While it runs, the console's login screen and logo stay off the screen, and the console doesn't draw on it. |
 
 A manifest that's missing, isn't valid, or asks for a contract the OS doesn't meet: the app isn't started (exit
 status 78, so it isn't restarted either) and the login screens say why.
@@ -85,8 +86,9 @@ partition has the rest of the card, less the OS's own settings.
 
 - **Python 3.13 or later** (Debian's `python3`), with its standard library. A minor release may move to a newer
   Python 3 once apps are checked on it; Python 4, or dropping a standard module apps use, would be a major.
-- **Libraries in the image** (compiled, so apps needn't compile anything): `rpi_ws281x` 5.0. Adding libraries is a
-  minor; removing one, or a change to one that breaks its users, is a major.
+- **Libraries in the image** (compiled, so apps needn't compile anything): `rpi_ws281x` 5.0, and since 1.1 Pillow
+  11 (Debian's `python3-pil`). Adding libraries is a minor; removing one, or a change to one that breaks its users,
+  is a major.
 - An app's pure-Python libraries (Microdot, App Base) come in its own `lib/`.
 - 32-bit ARM (armhf), for the Pi 2 and later. Pure Python doesn't notice.
 
@@ -95,6 +97,14 @@ partition has the rest of the card, less the OS's own settings.
 What the app user may open without root: GPIO (`/dev/gpiochip*`, `/dev/gpiomem`), I2C (`/dev/i2c-*`), SPI
 (`/dev/spidev*`), USB serial ports (`/dev/ttyUSB*`, `/dev/ttyACM*`), the display (`/dev/dri`, `/dev/fb*`) and
 input devices (touch, keyboards: `/dev/input/*`). I2C and SPI are off unless switched on in `config.txt` *(see Later)*.
+
+**The display** (since 1.1; the official 7" Touch Display, by DSI): an app with `"display": true` draws on it
+itself, through the framebuffer (`/dev/fb0`, RGB565 on the Touch Display: its size and format from the
+`FBIOGET_VSCREENINFO` ioctl and `/sys/class/graphics/fb0`), with Pillow to draw. The touch screen is an input device
+(found by name in `/proc/bus/input/devices`), its coordinates turned with the picture. The picture isn't turned for
+the app: it turns its own drawing by `rotation` in `app-request settings`. The backlight's `brightness` and
+`bl_power` (in `/sys/class/backlight/*/`) are the app's to change. The login screen may show briefly at boot, until
+the app starts; while the app is stopped between restarts, its last picture stays.
 
 ## Requests: `app-request`
 
@@ -166,10 +176,6 @@ Additions that fit the rules above, so they can wait for an app that needs them:
   default ALSA device (a USB adapter if there is one, else the jack), and a playback library if `aplay` isn't
   enough. With `pwm`, only USB audio. Neither official touch display has a speaker or buzzer; a piezo buzzer on a
   GPIO pin needs nothing new.
-- **The display** (the official 7" Touch Display on the Pi 2, by DSI): a manifest setting (`"display": true`) that
-  gives the screen to the app (no login screen or splash on it), the backlight's brightness and power for the app
-  user, the touch screen as an input device, and SDL2 and pygame in the image for drawing straight to the screen
-  (KMS) with no desktop. Its rotation is the `display-rotation` request (1.1).
 - **I2C and SPI** switched on for apps that say so (a manifest setting; `config.txt` is read at boot, so the first
   start after installing restarts the Pi).
 - **The OS's version, build and slot for the app**: App Base shows them on the app's page and in `/api/info`, read

@@ -2,7 +2,7 @@
 """The app: one per Pi, like a Pico's firmware. It lives in /data/app and starts at main.py, with its pure-Python
 libraries in lib/, and keeps what it writes (settings and so on) in /data/app-state. Its manifest, app.json:
 
-  {"juggle": "1.0", "name": "hello", "version": "1.0.0", "root": false, "pwm": false}
+  {"juggle": "1.0", "name": "hello", "version": "1.0.0", "root": false, "pwm": false, "display": false}
 
 juggle: the Juggle OS version the app needs, "MAJOR.MINOR" (docs/app-contract.md): refused if this OS's major differs
 or its minor is lower, and the app is given this OS's as JUGGLE; name: lowercase letters, digits and hyphens;
@@ -10,7 +10,9 @@ version: what the login screens show; root (optional): run as root, for
 libraries that need it (rpi_ws281x). Otherwise it runs as the app user, with the hardware groups (GPIO, I2C, SPI,
 video, input, serial) and the right to use ports below 1024 (its web page is on port 80). pwm (optional): it uses
 the PWM hardware (WS2812 LEDs on GPIO 18, by rpi_ws281x), which the onboard audio also uses, so the audio driver is
-unloaded while it runs; for any other app (or none) it's loaded.
+unloaded while it runs; for any other app (or none) it's loaded. display (optional, from Juggle 1.1): it draws on the
+screen itself (the framebuffer), so while it runs the console's login screen and logo stay off it and tty1 is in
+graphics mode; for any other app (or none) the console has it.
 
   app run              juggle-app.service: runs the app (the service restarts it if it stops)
   app install <file>   installs an app from a .tar of its folder (its deploy.ps1 copies one here), replacing the one
@@ -22,6 +24,7 @@ unloaded while it runs; for any other app (or none) it's loaded.
   app remove          stops the app and removes it and its state
 """
 
+import fcntl
 import json
 import os
 import re
@@ -39,7 +42,7 @@ STATE = Path("/data/app-state")
 INFO = Path("/run/juggle/app")
 SERVICE = "juggle-app.service"
 USER = "app"
-KEYS = {"juggle", "name", "version", "root", "pwm"}
+KEYS = {"juggle", "name", "version", "root", "pwm", "display"}
 # The Juggle OS version this OS gives apps (docs/app-contract.md): the MAJOR.MINOR of the release that last added to
 # what apps can rely on. Raised in the release that adds something.
 JUGGLE = "1.1"
@@ -48,7 +51,13 @@ JUGGLE_REQUIRED = True
 LEVEL = re.compile(r"(0|[1-9][0-9]{0,3})\.(0|[1-9][0-9]{0,3})")
 # The onboard (headphone) audio's driver, which uses the PWM hardware
 AUDIO_MODULE = "snd_bcm2835"
-NAME = re.compile(r"[a-z0-9]([a-z0-9-]{0,30}[a-z0-9])?")
+# An app that draws on the screen has it to itself: while this file is there, the login screen and the logo don't
+# start (their units' conditions), and tty1 is in graphics mode, so the console doesn't draw over the app
+DISPLAY = Path("/run/juggle/display")
+CONSOLE_UNITS = ("getty@tty1.service", "juggle-console-logo.service")
+TTY = "/dev/tty1"
+KDSETMODE, KD_TEXT, KD_GRAPHICS = 0x4B3A, 0x00, 0x01
+NAME =re.compile(r"[a-z0-9]([a-z0-9-]{0,30}[a-z0-9])?")
 VERSION = re.compile(r"[A-Za-z0-9._+-]{1,32}")
 # A bad manifest: the service doesn't restart the app (EX_CONFIG, in RestartPreventExitStatus)
 BAD_MANIFEST = 78
@@ -88,7 +97,7 @@ def check_juggle(needed):
 
 
 def manifest(folder):
-    """The app in a folder: (name, version, root, pwm), from its app.json."""
+    """The app in a folder: (name, version, root, pwm, display), from its app.json."""
     if not (folder / "main.py").is_file():
         raise AppError("There's no main.py.")
     try:
@@ -104,7 +113,7 @@ def manifest(folder):
     if unknown := set(data) - KEYS:
         raise AppError(f"app.json has settings Juggle OS doesn't know: {', '.join(sorted(unknown))}.")
     name, version = data.get("name"), data.get("version")
-    root, pwm = data.get("root", False), data.get("pwm", False)
+    root, pwm, display = data.get("root", False), data.get("pwm", False), data.get("display", False)
     if not isinstance(name, str) or not NAME.fullmatch(name):
         raise AppError("app.json's name must be lowercase letters, digits and hyphens, up to 32.")
     if not isinstance(version, str) or not VERSION.fullmatch(version):
@@ -113,7 +122,9 @@ def manifest(folder):
         raise AppError("app.json's root must be true or false.")
     if not isinstance(pwm, bool):
         raise AppError("app.json's pwm must be true or false.")
-    return name, version, root, pwm
+    if not isinstance(display, bool):
+        raise AppError("app.json's display must be true or false.")
+    return name, version, root, pwm, display
 
 
 def refresh_screens():
@@ -129,16 +140,40 @@ def audio(on):
     return result.returncode == 0
 
 
+def console(on):
+    """Gives the screen to the console (the login screen and the logo), or takes them off it for an app that draws
+    on it."""
+    if on:
+        DISPLAY.unlink(missing_ok=True)
+        tty_mode(KD_TEXT)
+        subprocess.run(["systemctl", "--no-block", "start", *CONSOLE_UNITS], check=False)
+    else:
+        DISPLAY.touch()
+        subprocess.run(["systemctl", "stop", *CONSOLE_UNITS], check=False)
+        tty_mode(KD_GRAPHICS)
+
+
+def tty_mode(mode):
+    try:
+        with open(TTY, "w") as tty:
+            fcntl.ioctl(tty, KDSETMODE, mode)
+    except OSError as error:
+        say(f"Couldn't switch {TTY} to {'text' if mode == KD_TEXT else 'graphics'}: {error}")
+
+
 def run():
     INFO.parent.mkdir(parents=True, exist_ok=True)
     try:
-        name, version, root, pwm = manifest(APP)
+        name, version, root, pwm, display = manifest(APP)
     except AppError as error:
         INFO.write_text(f"APP_ERROR={shlex.quote(str(error))}\n")
         say(f"Not starting the app: {error}")
+        console(True)
         sys.exit(BAD_MANIFEST)
     if not audio(not pwm) and pwm:
         sys.exit(1)
+    if display != DISPLAY.exists():
+        console(not display)
     INFO.write_text(f"APP_NAME={name}\nAPP_VERSION={version}\n")
     refresh_screens()
     command = ["/usr/bin/python3", "main.py"]
@@ -290,6 +325,7 @@ def remove():
     INFO.unlink(missing_ok=True)
     os.sync()
     audio(True)
+    console(True)
     refresh_screens()
 
 

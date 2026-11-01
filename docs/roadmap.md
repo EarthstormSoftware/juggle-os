@@ -515,7 +515,7 @@ Plan (2026-10-31). v1.0 freezes [the app contract](app-contract.md): 1.x release
   2026-11-01 (`image\test\soak.ps1 -Start`, then without `-Start` to compare), on v1.0.0 with Juggle Hello on App
   Base 1.0.0.
 
-### 9. The display's rotation (v1.1)
+### 9. The display (v1.1)
 
 Plan (2026-11-01). The touch screen Pi's display (the official 7" Touch Display 1) arrived mounted upside down, so
 its rotation comes first, as the `display-rotation` request (Juggle 1.1), set on App Base's page and remembered on
@@ -534,6 +534,16 @@ the Pi (not asked when flashing).
 - **Apps**: `settings` gains `display` (`connected`, `rotation`); an app drawing straight to the screen turns its own
   drawing, as SDL on KMS doesn't. App Base shows a Display section on the Device tab on a Pi with a display (or one
   already turned) and restarts the Pi to use it.
+- **The display for apps** (2026-11-01, for Juggle HA Control Panel, a Home Assistant panel on the touch screen Pi):
+  pygame was planned, but Debian's brings SDL2 with Mesa, LLVM, X11 and Wayland libraries and numpy, 238 MB on a
+  root partition of 1.2 GB. Checked on the Pi 2 instead: Pillow (`python3-pil`, 6 MB) draws, and the app writes the
+  framebuffer itself (a whole 800×480 screen drawn in about 30 ms and written in about 110 ms), with touch from the
+  input device in pure Python. `"display": true` in the manifest: while the app runs, `/run/juggle/display` keeps
+  `getty@tty1` and the console logo from starting (their units' conditions, so whichever starts first at boot, the
+  app has the screen), they're stopped, and tty1 is in graphics mode; the console has the screen back when another
+  app runs, the app's manifest is refused, or it's removed. The backlight is writable by the `video` group (a udev
+  rule). Checked by `checks.sh`: Pillow imports, the backlight, and in QEMU an app with `display` installed and
+  removed.
 
 ## Then
 
@@ -547,6 +557,7 @@ the Pi (not asked when flashing).
   controlled like PlasmaStick, with the modes of the old `uhcontrol.py` and later status and alerts. `rpi_ws281x` is
   in the image, `"pwm": true` frees the PWM hardware from the audio, and the LEDs need a brightness cap: 64 at full
   white is about 3.5 A, more than a Pi 2 can supply.
-- **Touch screen Pi**: the official 7" DSI display as a full-screen touch controller (pygame on KMS, no desktop)
-  that drives other devices through their HTTP APIs: the Unicorn HAT Pi and the PlasmaStick's JSON API.
+- **Touch screen Pi** (started: Juggle HA Control Panel, its own repo, private until 1.0): the official 7" DSI
+  display as a full-screen touch panel for Home Assistant's lights and sensors (Pillow on the framebuffer, no
+  desktop: see step 9).
 - The other Pi 2s, as uses come up.
