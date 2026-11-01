@@ -506,6 +506,10 @@ Plan (2026-10-31). v1.0 freezes [the app contract](app-contract.md): 1.x release
   on it (the two templates, checked on the released OS); and Juggle Unicorn public at 0.x (after `/check-public` on
   its history), with its 1.0 once its modes are done. PlasmaStick and Pico PIR are already 2.0 on App Base and move
   to App Base 1.0 when convenient.
+  - Done (2026-11-01): App Base 1.0.0 (its roadmap's step 5: what's frozen, and what changed before it), with every
+    product on it: Juggle Unicorn 0.5.0, PlasmaStick 3.0.0, Pico PIR 2.1.0, and the two templates. Juggle Hello and
+    Juggle Unicorn checked on Juggle OS v1.0.0 (all its checks pass on both Pis, now on the published release).
+    Next: Juggle Hello and Pico Hello 1.0.
 - **A soak test after v1.0** (decided 2026-10-31: not a big risk for the release): the test Pi runs its app for
   several days, comparing memory, disk space, the logs' size and the clock at the start and the end.
 
