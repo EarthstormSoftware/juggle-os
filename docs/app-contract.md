@@ -4,8 +4,8 @@ What a Juggle app can rely on: how it's installed and run, what it may read and 
 what it may ask the OS for. From v1.0 this is what Juggle OS's version number protects. Everything not written here
 (the card layout, the A/B slots, `os-update`, the setup page, the login screens) may change in any release.
 
-**Status: Juggle 1.0, frozen from Juggle OS v1.0.** 1.x releases only add to it (see Versions); what led up to it is
-under Before v1.
+**Status: Juggle 1.1.** Frozen at 1.0 from Juggle OS v1.0: 1.x releases only add to it (see Versions), and 1.1 adds
+the display's rotation. What led up to 1.0 is under Before v1.
 
 ## Versions
 
@@ -69,7 +69,7 @@ partition has the rest of the card, less the OS's own settings.
 - **User**: `app` (uid and gid 800), in the groups `gpio`, `i2c`, `spi`, `video`, `input` and `dialout`, and allowed
   to listen on ports below 1024. `root: true` runs it as root instead.
 - **Environment**: `PYTHONPATH=/data/app/lib`, `PYTHONUNBUFFERED=1`, `PYTHONDONTWRITEBYTECODE=1`,
-  `JUGGLE_STATE=/data/app-state`, `HOME=/data/app-state`, and `JUGGLE`, the contract the OS gives (`"1.0"`).
+  `JUGGLE_STATE=/data/app-state`, `HOME=/data/app-state`, and `JUGGLE`, the contract the OS gives (`"1.1"`).
 - **Its web page** is on port 80, at `http://<name>.local`, by convention (`juggle` and App Base expect it there).
   Nothing else on the Pi listens on 80. The app may listen on other ports too, on IPv4 and IPv6.
 - **Restarts**: whenever it stops, after 5 seconds, however often. Exit status 78 means "don't restart me" (a
@@ -105,8 +105,8 @@ is checked by the OS.
 - Exit status 1: refused or failed, with the reason (one line, for people) on standard error.
 - Exit status 2: a request this OS doesn't know, or the wrong arguments.
 
-Since: the contract that has it, which an app using it says it needs. All of these are in 1.0 (before v1.0 they came
-in Juggle OS 0.4 to 0.6).
+Since: the contract that has it, which an app using it says it needs. All but `display-rotation` are in 1.0 (before
+v1.0 they came in Juggle OS 0.4 to 0.6).
 
 | Request | Since | What it does | Answer |
 |---|---|---|---|
@@ -114,12 +114,13 @@ in Juggle OS 0.4 to 0.6).
 | `time-zone <zone>` | 1.0 | Sets the time zone (an IANA name, such as `Europe/London`), at once and at every start | |
 | `ntp <server>` | 1.0 | Sets the time server (`""` for the default) | |
 | `restart` | 1.0 | Restarts the Pi | |
-| `settings` | 1.0 | The Pi's settings | `{"time_zone", "ntp", "wifi_fallback": {"enabled", "after_minutes", "for_minutes"}, "wifi_ssid"}` (`wifi_ssid` null on Ethernet) |
+| `settings` | 1.0 | The Pi's settings | `{"time_zone", "ntp", "wifi_fallback": {"enabled", "after_minutes", "for_minutes"}, "wifi_ssid", "display": {"connected", "rotation"}}` (`wifi_ssid` null on Ethernet; `display` since 1.1: whether a DSI display is connected, and its rotation) |
 | `wifi-fallback <on\|off> <after> <for>` | 1.0 | Whether the Pi starts setup mode when it has no network, after how many minutes (1 to 1440) and for how many (5 to 120), from the next start | |
 | `setup` | 1.0 | Restarts into setup mode, keeping the settings until new ones are saved there | |
-| `factory-reset` | 1.0 | Forgets the Pi's settings (name, Wi-Fi, SSH keys, time zone) and restarts into setup mode. The app and its state stay. | |
+| `factory-reset` | 1.0 | Forgets the Pi's settings (name, Wi-Fi, SSH keys, time zone) and restarts into setup mode. The app and its state stay, and the display's rotation. | |
 | `wifi <ssid> [<country>]` | 1.0 | A new Wi-Fi network from the next start, the password on standard input (one line). On trial: if it doesn't connect within 5 minutes, the network before goes back. The app asks for the restart. | |
 | `networks` | 1.0 | The Wi-Fi networks in range | a JSON list of names, strongest first |
+| `display-rotation <0\|90\|180\|270>` | 1.1 | Turns the display's picture clockwise by so many degrees, its touch screen with it, from the next start (the app asks for the restart). For the official 7" Touch Display (1): the console and the touch screen turn; an app drawing straight to the screen turns its own drawing by `rotation` in `settings`. Kept through OS updates and a factory reset. | |
 
 ## Installing and removing (for deploy tools)
 
@@ -168,13 +169,13 @@ Additions that fit the rules above, so they can wait for an app that needs them:
 - **The display** (the official 7" Touch Display on the Pi 2, by DSI): a manifest setting (`"display": true`) that
   gives the screen to the app (no login screen or splash on it), the backlight's brightness and power for the app
   user, the touch screen as an input device, and SDL2 and pygame in the image for drawing straight to the screen
-  (KMS) with no desktop. The overlay and rotation in `config.txt` need checking on the display when it arrives.
+  (KMS) with no desktop. Its rotation is the `display-rotation` request (1.1).
 - **I2C and SPI** switched on for apps that say so (a manifest setting; `config.txt` is read at boot, so the first
   start after installing restarts the Pi).
 - **The OS's version, build and slot for the app**: App Base shows them on the app's page and in `/api/info`, read
   from `/etc/juggle-release` and the slot script, which aren't in the contract (so each may be null). As fields of
   `app-request settings`, say, apps could rely on them.
 - **More requests**: switching the Pi off (`poweroff`, for a Pi with a screen people can unplug safely afterwards),
-  the display's rotation, and the app's own mDNS service (`_http._tcp`) so it can be found as a web page.
+  and the app's own mDNS service (`_http._tcp`) so it can be found as a web page.
 - **More libraries**, as apps need them (a camera, sensors with compiled drivers), each pinned to its checksum as
   `rpi_ws281x` is.

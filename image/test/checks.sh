@@ -234,6 +234,25 @@ app_requests() {
 	[ "$(systemctl show -p NotifyAccess --value juggle-app)" = main ] || { echo "the app can't ask for a watchdog"; return 1; }
 }
 
+# The app may turn the display (app-request display-rotation, from Juggle 1.1): into the permanent slot's boot files,
+# then back as it was; a rotation that isn't one is refused
+display_rotation() {
+	local request=(sudo -n -u app sudo -n /usr/lib/juggle/app-request) before slot
+	before=$("${request[@]}" settings | python3 -c 'import json, sys; print(json.load(sys.stdin)["display"]["rotation"])') ||
+		return 1
+	if "${request[@]}" display-rotation 45 2> /dev/null; then echo "it took 45 degrees"; return 1; fi
+	slot=$(sed -n 's|^os_prefix=\(slot[AB]\)/$|\1|p' /boot/firmware/config.txt)
+	"${request[@]}" display-rotation 270 > /dev/null || return 1
+	grep -qw 'fbcon=rotate:3' "/boot/firmware/$slot/cmdline.txt" || { echo "the console isn't turned"; return 1; }
+	grep -qx 'dtoverlay=vc4-kms-dsi-7inch,invy,swapxy' /boot/firmware/config.txt || { echo "the touch screen isn't turned"; return 1; }
+	"${request[@]}" display-rotation "$before" > /dev/null || return 1
+	[ "$("${request[@]}" settings | python3 -c 'import json, sys; print(json.load(sys.stdin)["display"]["rotation"])')" = "$before" ] ||
+		{ echo "it isn't back to $before"; return 1; }
+	if [ "$before" = 0 ] && grep -q 'fbcon=rotate\|dsi-7inch' "/boot/firmware/$slot/cmdline.txt" /boot/firmware/config.txt; then
+		echo "the rotation stayed in the boot files"; return 1
+	fi
+}
+
 echo
 echo "== Checks"
 result=0
@@ -265,4 +284,5 @@ check sudo_works "sudo works for the admin user"
 check juggle_needed "an app that doesn't say which Juggle OS it needs, or needs a later one, isn't installed"
 [ "$mode" = qemu ] && check juggle_added "an app from before v1.0 installed again with juggle keeps its state"
 check app_requests "the app may ask app-request, and only that"
+check display_rotation "the app may turn the display, into the boot files and back"
 exit $result

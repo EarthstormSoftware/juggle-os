@@ -511,7 +511,29 @@ Plan (2026-10-31). v1.0 freezes [the app contract](app-contract.md): 1.x release
     Juggle Unicorn checked on Juggle OS v1.0.0 (all its checks pass on both Pis, now on the published release).
     Next: Juggle Hello and Pico Hello 1.0.
 - **A soak test after v1.0** (decided 2026-10-31: not a big risk for the release): the test Pi runs its app for
-  several days, comparing memory, disk space, the logs' size and the clock at the start and the end.
+  several days, comparing memory, disk space, the logs' size and the clock at the start and the end. Started
+  2026-11-01 (`image\test\soak.ps1 -Start`, then without `-Start` to compare), on v1.0.0 with Juggle Hello on App
+  Base 1.0.0.
+
+### 9. The display's rotation (v1.1)
+
+Plan (2026-11-01). The touch screen Pi's display (the official 7" Touch Display 1) arrived mounted upside down, so
+its rotation comes first, as the `display-rotation` request (Juggle 1.1), set on App Base's page and remembered on
+the Pi (not asked when flashing).
+
+- **Checked by hand on the Pi 2** (2026-11-01): `video=DSI-1:800x480@60,rotate=180` on the kernel command line turns
+  the console in hardware, but 90 and 270 don't (vc4's planes can't, and fbdev's software rotation is skipped with
+  HDMI forced on as well), so the console turns with `fbcon=rotate:N` for every angle. The overlay has no rotation of
+  its own: the touch screen turns with its parameters, found by tapping the corners, `invx,invy` at 180,
+  `invx,swapxy` at 90, `invy,swapxy` at 270 (`display_auto_detect=0`, as the overlay is then named). The console
+  logo is drawn straight into the framebuffer, which fbcon's turn doesn't turn, so it turns it itself.
+- **Kept on the data partition** (`/data/settings/display-rotation`, not in `device.json`, so a factory reset keeps
+  it: the screen is mounted as it was), and written into the boot files: the permanent slot's `cmdline.txt` and a
+  block at the end of `config.txt`, and those of a slot waiting to be tried. `os-update write` puts it into the new
+  slot's, as each image's are its own.
+- **Apps**: `settings` gains `display` (`connected`, `rotation`); an app drawing straight to the screen turns its own
+  drawing, as SDL on KMS doesn't. App Base shows a Display section on the Device tab on a Pi with a display (or one
+  already turned) and restarts the Pi to use it.
 
 ## Then
 

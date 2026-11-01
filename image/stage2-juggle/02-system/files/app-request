@@ -16,12 +16,17 @@ else, as root (sudo, in /etc/sudoers.d/020_juggle-app); each request is checked 
                                 before goes back. The country is the one set already, unless given (a Pi set up on
                                 Ethernet has none)
   app-request networks          prints the Wi-Fi networks in range, strongest first, as JSON
-  app-request settings          prints {"time_zone", "ntp", "wifi_fallback", "wifi_ssid"} as JSON
+  app-request display-rotation <0|90|180|270>
+                                turns the display's picture clockwise, its touch screen with it, from the next start
+                                (the app asks for the restart). A factory reset keeps it
+  app-request settings          prints {"time_zone", "ntp", "wifi_fallback", "wifi_ssid", "display": {"connected",
+                                "rotation"}} as JSON
   app-request restart           restarts the Pi
   app-request setup             restarts the Pi into setup mode, keeping its settings until new ones are saved there
                                 (to rename it, or change its Wi-Fi or SSH keys)
   app-request factory-reset     forgets the Pi's settings (name, Wi-Fi, SSH keys, time zone) and restarts it into
-                                setup mode, as a new Pi. Its SSH host key stays, and the app and its state: resetting
+                                setup mode, as a new Pi. Its SSH host key and display rotation stay, and the app and
+                                its state: resetting
                                 those is the app's own reset.
 """
 
@@ -184,11 +189,26 @@ def main():
             change_wifi(args[1], args[2] if len(args) == 3 else None, sys.stdin.readline().rstrip("\r\n"))
         elif args == ["networks"]:
             print(json.dumps(settings_rules().scan_wifi()))
+        elif len(args) == 2 and args[0] == "display-rotation":
+            rules = settings_rules()
+            if args[1] not in {str(rotation) for rotation in rules.ROTATIONS}:
+                raise RequestError(f"Not a rotation (0, 90, 180 or 270): {args[1]}")
+            rotation = int(args[1])
+            if rotation:
+                write(rules.DISPLAY_ROTATION, f"{rotation}\n", 0o644)
+            else:
+                rules.DISPLAY_ROTATION.unlink(missing_ok=True)
+            rules.apply_display(rotation)
+            os.sync()
+            print(f"Display rotation: {rotation} degrees, from the next start")
         elif args == ["settings"]:
+            rules = settings_rules()
             settings = json.loads(SETTINGS.read_text(encoding="utf-8"))
             print(json.dumps({"time_zone": settings.get("timezone"), "ntp": settings.get("ntp", ""),
-                              "wifi_fallback": settings_rules().wifi_fallback(settings),
-                              "wifi_ssid": (settings.get("wifi") or {}).get("ssid")}))
+                              "wifi_fallback": rules.wifi_fallback(settings),
+                              "wifi_ssid": (settings.get("wifi") or {}).get("ssid"),
+                              "display": {"connected": rules.display_connected(),
+                                          "rotation": rules.display_rotation()}}))
         elif args == ["restart"]:
             subprocess.run(["systemctl", "reboot"], check=True)
         elif args == ["setup"]:

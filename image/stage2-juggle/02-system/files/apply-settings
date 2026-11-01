@@ -54,6 +54,17 @@ TRIAL_MINUTES = 5
 # puts the one before back (give_up_wifi()) rather than starting setup mode. Both go once it has connected.
 WIFI_TRIAL = Path("/data/settings/wifi-trial")
 WIFI_PREVIOUS = Path("/data/settings/wifi-previous.json")
+# The display's rotation (app-request display-rotation): how far the picture turns clockwise, in degrees. It isn't in
+# device.json, so a factory reset keeps it (the screen is still mounted the same way). It goes into the boot files:
+# the console's turn on the kernel command line (fbcon, which turns it in software, so it works with HDMI forced on
+# too), and in config.txt the official 7" Touch Display's overlay, its touch screen turned to match, in place of the
+# one display_auto_detect loads. os-update puts it into a new slot's.
+DISPLAY_ROTATION = Path("/data/settings/display-rotation")
+ROTATIONS = {0: "", 90: ",invx,swapxy", 180: ",invx,invy", 270: ",invy,swapxy"}
+DISPLAY_BEGIN = "# The display's rotation (app-request display-rotation)"
+DISPLAY_END = "# The display's rotation: end"
+DRM = Path("/sys/class/drm")
+BOOT = Path("/boot/firmware")
 
 HOSTNAME = re.compile(r"[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?")
 COUNTRY = re.compile(r"[A-Z]{2}")
@@ -205,6 +216,69 @@ def wifi_fingerprint(wifi: dict) -> str:
 def wifi_fallback(settings: dict) -> dict:
     """The Wi-Fi fallback as set, or the defaults."""
     return WIFI_FALLBACK | settings.get("wifi_fallback", {})
+
+
+def display_rotation() -> int:
+    """The display's rotation as set: 0, 90, 180 or 270."""
+    try:
+        rotation = int(DISPLAY_ROTATION.read_text(encoding="utf-8").strip())
+    except (OSError, ValueError):
+        return 0
+    return rotation if rotation in ROTATIONS else 0
+
+
+def display_connected() -> bool:
+    """Whether a DSI display (the official Touch Display) is connected."""
+    return any(status.read_text().strip() == "connected" for status in DRM.glob("card*-DSI-*/status"))
+
+
+def rotated_cmdline(cmdline: str, rotation: int) -> str:
+    """A kernel command line with the console turned by rotation (and any turn it had taken out)."""
+    cmdline = re.sub(r"\s*\bfbcon=rotate:\d\b", "", cmdline.strip())
+    return cmdline + (f" fbcon=rotate:{rotation // 90}" if rotation else "") + "\n"
+
+
+def rotated_config(config: str, rotation: int) -> str:
+    """A config.txt with the display's overlay for rotation, at the end (and any block it had taken out)."""
+    lines, kept = [], True
+    for line in config.splitlines():
+        if line == DISPLAY_BEGIN:
+            kept = False
+        elif line == DISPLAY_END and not kept:
+            kept = True
+        elif kept:
+            lines.append(line)
+    text = "\n".join(lines).rstrip("\n") + "\n"
+    if rotation:
+        text += (f"\n{DISPLAY_BEGIN}\n[all]\ndisplay_auto_detect=0\n"
+                 f"dtoverlay=vc4-kms-dsi-7inch{ROTATIONS[rotation]}\n{DISPLAY_END}\n")
+    return text
+
+
+def write_boot(path: Path, text: str) -> None:
+    """Writes a file on the boot partition as nearly all at once as FAT allows: a new file, then a rename."""
+    if path.read_text() == text:
+        return
+    new = path.with_name(path.name + ".new")
+    new.write_text(text)
+    os.sync()
+    os.replace(new, path)
+    os.sync()
+
+
+def apply_display(rotation: int) -> None:
+    """Puts the rotation into the boot files: the permanent slot's, and a slot's waiting to be tried, for its next
+    start."""
+    for name in ("config.txt", "tryboot.txt"):
+        config = BOOT / name
+        if not config.exists():
+            continue
+        text = config.read_text()
+        slot = re.search(r"^os_prefix=(slot[AB])/\s*$", text, re.MULTILINE)
+        if slot:
+            cmdline = BOOT / slot.group(1) / "cmdline.txt"
+            write_boot(cmdline, rotated_cmdline(cmdline.read_text(), rotation))
+        write_boot(config, rotated_config(text, rotation))
 
 
 def write(path: Path, text: str, mode: int) -> None:

@@ -42,7 +42,7 @@ USER = "app"
 KEYS = {"juggle", "name", "version", "root", "pwm"}
 # The Juggle OS version this OS gives apps (docs/app-contract.md): the MAJOR.MINOR of the release that last added to
 # what apps can rely on. Raised in the release that adds something.
-JUGGLE = "1.0"
+JUGGLE = "1.1"
 # From v1.0, an app.json must say which Juggle OS it needs ("juggle"): apps from before it were taken until then
 JUGGLE_REQUIRED = True
 LEVEL = re.compile(r"(0|[1-9][0-9]{0,3})\.(0|[1-9][0-9]{0,3})")

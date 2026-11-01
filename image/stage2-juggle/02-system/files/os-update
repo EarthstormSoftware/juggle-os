@@ -23,6 +23,7 @@ still feeding the watchdog, by way of guard).
 """
 
 import hashlib
+import importlib.util
 import lzma
 import os
 import re
@@ -31,6 +32,7 @@ import shutil
 import subprocess
 import sys
 import time
+from importlib.machinery import SourceFileLoader
 from pathlib import Path
 
 BOOT = Path("/boot/firmware")
@@ -337,6 +339,14 @@ def copy_slot(source, destination):
                 raise UpdateError(f"{relative / name} doesn't read back as written on the boot partition.")
 
 
+def settings_rules():
+    """apply-settings, as a module: the Pi's settings that go into the boot files (the display's rotation)."""
+    loader = SourceFileLoader("apply_settings", "/usr/lib/juggle/apply-settings")
+    module = importlib.util.module_from_spec(importlib.util.spec_from_loader("apply_settings", loader))
+    loader.exec_module(module)
+    return module
+
+
 def replace_file(path, text):
     """Writes a file on the boot partition as nearly all at once as FAT allows: a new file, then a rename."""
     new = path.with_name(path.name + ".new")
@@ -387,7 +397,10 @@ def write(block_map=None):
         cmdline, count = re.subn(r"\broot=PARTUUID=\S+", f"root=PARTUUID={disk}-{SLOTS[target]:02d}", cmdline)
         if count != 1:
             raise UpdateError("The image's cmdline.txt doesn't name its root.")
-        replace_file(new_dir / "cmdline.txt", cmdline)
+        # The display's rotation goes with the Pi, not the image
+        rules = settings_rules()
+        rotation = rules.display_rotation()
+        replace_file(new_dir / "cmdline.txt", rules.rotated_cmdline(cmdline, rotation))
         shutil.copyfile(mounted / "juggle-release.txt", new_dir / "juggle-release.txt")
         os.sync()
         os.rename(new_dir, slot_dir)
@@ -399,7 +412,7 @@ def write(block_map=None):
         # The new image's config.txt, starting the new slot, for one boot
         config, count = re.subn(r"^os_prefix=slotA/\s*$", f"os_prefix=slot{target}/", (mounted / "config.txt").read_text(),
                                 flags=re.MULTILINE)
-        replace_file(BOOT / "tryboot.txt", config)
+        replace_file(BOOT / "tryboot.txt", rules.rotated_config(config, rotation))
         write_record({"UPDATE_WRITTEN": int(time.time()), "UPDATE_SLOT": target,
                       "UPDATE_VERSION": release_values(slot_dir).get("VERSION", "?"),
                       "UPDATE_APP": int(app_state()["SubState"] == "running")})
