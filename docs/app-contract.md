@@ -171,6 +171,9 @@ Additions that fit the rules above, so they can wait for an app that needs them:
   (KMS) with no desktop. The overlay and rotation in `config.txt` need checking on the display when it arrives.
 - **I2C and SPI** switched on for apps that say so (a manifest setting; `config.txt` is read at boot, so the first
   start after installing restarts the Pi).
+- **The OS's version, build and slot for the app**: App Base shows them on the app's page and in `/api/info`, read
+  from `/etc/juggle-release` and the slot script, which aren't in the contract (so each may be null). As fields of
+  `app-request settings`, say, apps could rely on them.
 - **More requests**: switching the Pi off (`poweroff`, for a Pi with a screen people can unplug safely afterwards),
   the display's rotation, and the app's own mDNS service (`_http._tcp`) so it can be found as a web page.
 - **More libraries**, as apps need them (a camera, sensors with compiled drivers), each pinned to its checksum as
