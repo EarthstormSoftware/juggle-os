@@ -560,4 +560,10 @@ the Pi (not asked when flashing).
 - **Touch screen Pi** (started: Juggle HA Control Panel, its own repo, private until 1.0): the official 7" DSI
   display as a full-screen touch panel for Home Assistant's lights and sensors (Pillow on the framebuffer, no
   desktop: see step 9).
+- **HDMI displays** (later, asked 2026-11-03, when there's an HDMI screen to use): v1.1's display is the official
+  Touch Display's only. `display_connected()` looks at DSI connectors alone, and a turn writes the
+  `vc4-kms-dsi-7inch` overlay. For HDMI: whether one is connected (with HDMI forced on, its connector may always say
+  `connected`: check on a Pi), a turn without the overlay (`fbcon=rotate:N` turns the console at any angle, but KMS
+  only 0 and 180), touch from a USB touch screen (likely as it is), and no backlight, so an app hides its
+  brightness.
 - The other Pi 2s, as uses come up.
