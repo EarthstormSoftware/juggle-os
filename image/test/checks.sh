@@ -276,6 +276,7 @@ display_rotation() {
 	slot=$(sed -n 's|^os_prefix=\(slot[AB]\)/$|\1|p' /boot/firmware/config.txt)
 	"${request[@]}" display-rotation 270 > /dev/null || return 1
 	grep -qw 'fbcon=rotate:3' "/boot/firmware/$slot/cmdline.txt" || { echo "the console isn't turned"; return 1; }
+	grep -qw 'plymouth.splash=juggle-270' "/boot/firmware/$slot/cmdline.txt" || { echo "the splash isn't turned"; return 1; }
 	grep -qx 'dtoverlay=vc4-kms-dsi-7inch,invy,swapxy' /boot/firmware/config.txt || { echo "the touch screen isn't turned"; return 1; }
 	"${request[@]}" display-rotation "$before" > /dev/null || return 1
 	[ "$("${request[@]}" settings | python3 -c 'import json, sys; print(json.load(sys.stdin)["display"]["rotation"])')" = "$before" ] ||

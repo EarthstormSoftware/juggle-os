@@ -17,6 +17,22 @@ install -d "$theme"
 find "${ROOTFS_DIR}/usr/share/plymouth/themes/spinner" -name '*.png' ! -name watermark.png -exec cp {} "$theme/" \;
 rsvg-convert -w 560 files/logo.svg -o "$theme/watermark.png"
 install -m 644 files/juggle.plymouth "$theme/"
+# The same turned for each way the display can be (Plymouth doesn't follow fbcon=rotate): upright pictures turned, and
+# placed to suit. On its side the screen is only 480 wide, so the logo is smaller. The command line picks one, and a
+# hook puts them in the initramfs, where the splash starts from.
+for rotation in 90 180 270; do
+	turned="$theme-$rotation"
+	install -d "$turned"
+	for picture in "$theme"/*.png; do
+		magick "$picture" -rotate "$rotation" "$turned/$(basename "$picture")"
+	done
+	if [ "$rotation" != 180 ]; then
+		rsvg-convert -w 400 files/logo.svg | magick png:- -rotate "$rotation" "$turned/watermark.png"
+	fi
+	awk -v r="$rotation" -f files/turn-plymouth.awk files/juggle.plymouth > "$turned/juggle-$rotation.plymouth"
+	chmod 644 "$turned"/*
+done
+install -m 755 files/juggle-splash.hook "${ROOTFS_DIR}/etc/initramfs-tools/hooks/juggle-splash"
 on_chroot <<- EOF
 	plymouth-set-default-theme juggle
 EOF

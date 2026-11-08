@@ -1,0 +1,12 @@
+#!/bin/sh
+# Plymouth's own hook copies only the default theme into the initramfs: these are the splash turned with the display,
+# which the kernel command line picks (plymouth.splash=, written by apply-settings)
+case "$1" in
+prereqs)
+	exit 0
+	;;
+esac
+for theme in /usr/share/plymouth/themes/juggle-*; do
+	mkdir -p "${DESTDIR}${theme}"
+	cp -a "$theme/." "${DESTDIR}${theme}/"
+done

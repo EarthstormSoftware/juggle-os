@@ -1,7 +1,8 @@
 [Unit]
 Description=Juggle app (in /data/app)
 Requires=juggle-data.service
-After=juggle-data.service juggle-settings.service network.target
+# After the boot splash: when it goes, it puts tty1 back in text mode, over an app that draws on the screen
+After=juggle-data.service juggle-settings.service network.target plymouth-quit.service
 ConditionPathExists=/data/app/main.py
 # Not in setup mode: the setup page has port 80
 ConditionPathExists=!/run/juggle/setup

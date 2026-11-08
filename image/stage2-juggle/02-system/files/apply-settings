@@ -233,9 +233,10 @@ def display_connected() -> bool:
 
 
 def rotated_cmdline(cmdline: str, rotation: int) -> str:
-    """A kernel command line with the console turned by rotation (and any turn it had taken out)."""
-    cmdline = re.sub(r"\s*\bfbcon=rotate:\d\b", "", cmdline.strip())
-    return cmdline + (f" fbcon=rotate:{rotation // 90}" if rotation else "") + "\n"
+    """A kernel command line with the console and the boot splash turned by rotation (and any turn they had taken
+    out)."""
+    cmdline = re.sub(r"\s*\b(fbcon=rotate:\d|plymouth\.splash=juggle-\d+)\b", "", cmdline.strip())
+    return cmdline + (f" fbcon=rotate:{rotation // 90} plymouth.splash=juggle-{rotation}" if rotation else "") + "\n"
 
 
 def rotated_config(config: str, rotation: int) -> str:

@@ -527,6 +527,10 @@ the Pi (not asked when flashing).
   its own: the touch screen turns with its parameters, found by tapping the corners, `invx,invy` at 180,
   `invx,swapxy` at 90, `invy,swapxy` at 270 (`display_auto_detect=0`, as the overlay is then named). The console
   logo is drawn straight into the framebuffer, which fbcon's turn doesn't turn, so it turns it itself.
+- **The boot splash** (2026-11-08): Plymouth doesn't follow `fbcon=rotate`, and `panel_orientation=` on the command
+  line, which it does follow, would also turn the framebuffer that apps already turn themselves. So the image has the
+  theme turned for each angle (`juggle-90`, `-180`, `-270`, each in the initramfs), and the command line picks one
+  (`plymouth.splash=`).
 - **Kept on the data partition** (`/data/settings/display-rotation`, not in `device.json`, so a factory reset keeps
   it: the screen is mounted as it was), and written into the boot files: the permanent slot's `cmdline.txt` and a
   block at the end of `config.txt`, and those of a slot waiting to be tried. `os-update write` puts it into the new
