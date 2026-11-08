@@ -3,12 +3,12 @@
 # messages still go to the journal and the kernel log; to see them on screen, remove "quiet loglevel=3" and "splash"
 # from slotA/cmdline.txt on the card (or press Esc during boot).
 
-# The firmware's rainbow square and the kernel's raspberries go; the console blanks (and the monitor sleeps) after 5
-# minutes without a key pressed; the log only shows errors. HDMI is forced on: the Pi 2's hotplug signal is unreliable
-# with some monitors, and the KMS driver would otherwise switch the display off when it takes over (it does no harm
-# without a monitor).
+# The firmware's rainbow square and the kernel's raspberries go; the console never blanks and has no cursor, so neither
+# can touch a screen an app is drawing on; the log only shows errors. HDMI is forced on: the Pi 2's hotplug signal is
+# unreliable with some monitors, and the KMS driver would otherwise switch the display off when it takes over (it does
+# no harm without a monitor).
 echo "disable_splash=1" >> "${ROOTFS_DIR}/boot/firmware/config.txt"
-sed -i '1s/$/ quiet loglevel=3 logo.nologo consoleblank=300 vc4.force_hotplug=1 splash plymouth.ignore-serial-consoles/' \
+sed -i '1s/$/ quiet loglevel=3 logo.nologo consoleblank=0 vt.global_cursor_default=0 vc4.force_hotplug=1 splash plymouth.ignore-serial-consoles/' \
 	"${ROOTFS_DIR}/boot/firmware/cmdline.txt"
 
 # Plymouth theme: the logo over the spinner theme's animation, on the logo's dark background
