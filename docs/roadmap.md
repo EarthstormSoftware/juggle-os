@@ -569,5 +569,7 @@ the Pi (not asked when flashing).
   `vc4-kms-dsi-7inch` overlay. For HDMI: whether one is connected (with HDMI forced on, its connector may always say
   `connected`: check on a Pi), a turn without the overlay (`fbcon=rotate:N` turns the console at any angle, but KMS
   only 0 and 180), touch from a USB touch screen (likely as it is), and no backlight, so an app hides its
-  brightness.
+  brightness. HDMI sound: v1.1 turns it off (`noaudio` on the `vc4-kms-v3d` overlay, as its driver logs an error every
+  10 s with no monitor). To offer it, a setting kept and applied as the rotation is (`app-request`, a file in
+  `/data/settings`, `config.txt` rewritten, `os-update` carrying it into a new slot, then a restart).
 - The other Pi 2s, as uses come up.

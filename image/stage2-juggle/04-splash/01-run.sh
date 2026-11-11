@@ -11,6 +11,12 @@ echo "disable_splash=1" >> "${ROOTFS_DIR}/boot/firmware/config.txt"
 sed -i '1s/$/ quiet loglevel=3 logo.nologo consoleblank=0 vt.global_cursor_default=0 vc4.force_hotplug=1 splash plymouth.ignore-serial-consoles/' \
 	"${ROOTFS_DIR}/boot/firmware/cmdline.txt"
 
+# No HDMI audio (an app's sound is the jack or USB: docs/app-contract.md): with HDMI forced on and no monitor, its
+# driver logs "Unknown ELD version 0" every 10 s, which pushes everything else out of the kernel's log. The grep stops
+# the build if the stock line ever changes, rather than quietly leaving the audio on.
+grep -qx 'dtoverlay=vc4-kms-v3d' "${ROOTFS_DIR}/boot/firmware/config.txt"
+sed -i 's/^dtoverlay=vc4-kms-v3d$/dtoverlay=vc4-kms-v3d,noaudio/' "${ROOTFS_DIR}/boot/firmware/config.txt"
+
 # Plymouth theme: the logo over the spinner theme's animation, on the logo's dark background
 theme="${ROOTFS_DIR}/usr/share/plymouth/themes/juggle"
 install -d "$theme"
