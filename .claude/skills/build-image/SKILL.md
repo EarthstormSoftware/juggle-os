@@ -2,6 +2,7 @@
 name: build-image
 description: Build the Juggle OS image with Docker (image\build.ps1) and report the version, size and package changes. Use when the image needs (re)building.
 argument-hint: "[quick]"
+model: haiku
 ---
 
 Build the Juggle OS image. Arguments: $ARGUMENTS (`quick` reuses pi-gen's stages 0 and 1: about 6 minutes instead

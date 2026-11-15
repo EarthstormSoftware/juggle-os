@@ -2,6 +2,7 @@
 name: test-image
 description: Boot a built Juggle OS image in QEMU (image\test\test-qemu.ps1) and report what passed and failed. Use after building an image.
 argument-hint: "[quick] [image path]"
+model: haiku
 ---
 
 Test a Juggle OS image in QEMU. Arguments: $ARGUMENTS (`quick` boots once, about 20 minutes; the full test boots
