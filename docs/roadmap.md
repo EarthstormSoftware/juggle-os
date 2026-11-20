@@ -572,4 +572,15 @@ the Pi (not asked when flashing).
   brightness. HDMI sound: v1.1 turns it off (`noaudio` on the `vc4-kms-v3d` overlay, as its driver logs an error every
   10 s with no monitor). To offer it, a setting kept and applied as the rotation is (`app-request`, a file in
   `/data/settings`, `config.txt` rewritten, `os-update` carrying it into a new slot, then a restart).
+- **Screen sleep** (asked 2026-11-20, for 1.2): v1.1 never blanks the console (`consoleblank=0` on the command line,
+  so a screen never looks dead). Some screens need to sleep (burn-in), so it becomes a per-Pi setting, with one rule:
+  a screen only sleeps if something can wake it. A `screen` setting with a `mode`: `always_on` (the default),
+  `timeout` (only with an input device present: touch, keyboard or mouse wakes it; refused or `always_on` with a
+  logged reason without one), `schedule` (off between set hours, for a display with no input), or `app` (the app
+  sleeps and wakes it on its own events, through a Pi-only helper in App Base's `pi.py`, so Picos are unaffected; the
+  device setting wins over the manifest). The console timeout can probably be set at runtime
+  (`/sys/module/kernel/parameters/consoleblank`: check), which would replace the fixed command line value. An app
+  drawing straight to the framebuffer isn't blanked by the console, so it must do it itself. A `juggle` command wakes
+  a sleeping screen over SSH. Spike first on a Pi: how the screen goes off (HDMI: DPMS through vc4, DSI: the
+  backlight, and whether the official touch display's touch controller can wake it).
 - The other Pi 2s, as uses come up.
