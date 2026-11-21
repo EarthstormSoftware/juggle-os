@@ -591,6 +591,10 @@ the Pi (not asked when flashing).
     idea is out: `consoleblank=0` stays as the default and a boot step applies `setterm --blank N` (minutes, minimum
     1) to tty1 from the `screen` setting, with no `config.txt` rewrite or restart. `schedule` can use `force` and
     `poke` from a timer (not tested yet). `setterm` only affects the text console, so an app drawing to the
-    framebuffer blanks and wakes itself. Still to check: the connector's `status` with the monitor unplugged
-    (`vc4.force_hotplug=1` may make it always say `connected`), and a DSI display.
+    framebuffer blanks and wakes itself. Unplugged test: `status` still says `connected` (`vc4.force_hotplug=1`),
+    but `edid` is 0 bytes (256 with the monitor), so the EDID size says whether a monitor is attached; empty means
+    nothing to blank (or a monitor with no EDID: leave the screen on). The EDID came back on a replug without a
+    restart, but the mode list stayed on the 5 fallback modes and the console looked the wrong size; writing
+    `detect` to the connector's `status` file re-probed it (41 modes, native size). A wake step should do that
+    first. Still to check: a DSI display.
 - The other Pi 2s, as uses come up.
