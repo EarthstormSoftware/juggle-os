@@ -594,7 +594,15 @@ the Pi (not asked when flashing).
     framebuffer blanks and wakes itself. Unplugged test: `status` still says `connected` (`vc4.force_hotplug=1`),
     but `edid` is 0 bytes (256 with the monitor), so the EDID size says whether a monitor is attached; empty means
     nothing to blank (or a monitor with no EDID: leave the screen on). The EDID came back on a replug without a
-    restart, but the mode list stayed on the 5 fallback modes and the console looked the wrong size; writing
-    `detect` to the connector's `status` file re-probed it (41 modes, native size). A wake step should do that
-    first. Still to check: a DSI display.
+    restart, but the output stayed on a fallback 1024x768 (fb 1680x1050), so the console looked the wrong size.
+    Writing `detect` or `on` to the connector's `status` file refreshed the mode list (41 modes) but did not
+    re-set the output; only a restart did. So a re-plug can leave the wrong size: blank and wake alone kept the
+    right one, and a replugged monitor needs a restart.
+    Apps drawing to the framebuffer: with tty1 in graphics mode (`KDSETMODE` 1), `setterm --blank force` does
+    nothing (DPMS stays On). Dropping to text mode first works: `sleep()` = text mode, then `setterm --blank force`
+    (DPMS Off, the monitor went to standby); `wake()` = `setterm --blank poke`, graphics mode, then the app redraws
+    the whole picture (checked with an `mmap` draw on the Pi 2: white, standby, white). In a test with no app
+    running, the console's logo service kept redrawing the logos over the picture every 2 s; a real `display` app
+    has the console units stopped, so it doesn't. The helper must not start them again. Still to check: a DSI
+    display (backlight, and whether its touch controller can wake it).
 - The other Pi 2s, as uses come up.
