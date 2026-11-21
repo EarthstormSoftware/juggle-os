@@ -603,6 +603,13 @@ the Pi (not asked when flashing).
     (DPMS Off, the monitor went to standby); `wake()` = `setterm --blank poke`, graphics mode, then the app redraws
     the whole picture (checked with an `mmap` draw on the Pi 2: white, standby, white). In a test with no app
     running, the console's logo service kept redrawing the logos over the picture every 2 s; a real `display` app
-    has the console units stopped, so it doesn't. The helper must not start them again. Still to check: a DSI
-    display (backlight, and whether its touch controller can wake it).
+    has the console units stopped, so it doesn't. The helper must not start them again.
+  - **DSI spike, done 2026-11-21 on the Purple Pi (official 7" Touch Display 1, Juggle HA Control Panel running):**
+    the backlight is `/sys/class/backlight/10-0045` (`brightness` 0-255, `max_brightness` 255). Writing 0 turns the
+    panel dark, 255 brings it back (checked by eye; `actual_brightness` follows). `bl_power` read 4 at first and 0
+    after the first write, so use `brightness`, not `bl_power`. The touch controller (`ft5x06`, an input device found by
+    name) kept reporting while the panel was dark (163 events in 22 s), so a touch can wake it. A DSI `sleep()` is
+    brightness 0 and `wake()` is the saved brightness back, with no console, DPMS or redraw involved. The DSI
+    connector has no EDID (`dpms` stays On), so the EDID check is HDMI-only: a DSI display's presence is the
+    connector. Open: the first touch that wakes the screen should probably not press anything (the app decides).
 - The other Pi 2s, as uses come up.
