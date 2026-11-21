@@ -612,8 +612,8 @@ the Pi (not asked when flashing).
     has the console units stopped, so it doesn't. The helper must not start them again.
   - **DSI spike, done 2026-11-21 on the Purple Pi (official 7" Touch Display 1, Juggle HA Control Panel running):**
     the backlight is `/sys/class/backlight/10-0045` (`brightness` 0-255, `max_brightness` 255). Writing 0 turns the
-    panel dark, 255 brings it back (checked by eye; `actual_brightness` follows). `bl_power` read 4 at first and 0
-    after the first write, so use `brightness`, not `bl_power`. The touch controller (`ft5x06`, an input device found by
+    panel dark, 255 brings it back (checked by eye; `actual_brightness` follows). The HA panel's own sleep uses
+    `bl_power` (4 off, 0 on): it read 4 at first because the panel had gone to sleep by itself. The touch controller (`ft5x06`, an input device found by
     name) kept reporting while the panel was dark (163 events in 22 s), so a touch can wake it. A DSI `sleep()` is
     brightness 0 and `wake()` is the saved brightness back, with no console, DPMS or redraw involved. The DSI
     connector has no EDID (`dpms` stays On), so the EDID check is HDMI-only: a DSI display's presence is the
