@@ -19,8 +19,12 @@ else, as root (sudo, in /etc/sudoers.d/020_juggle-app); each request is checked 
   app-request display-rotation <0|90|180|270>
                                 turns the display's picture clockwise, its touch screen with it, from the next start
                                 (the app asks for the restart). A factory reset keeps it
+  app-request screen-sleep      turns an HDMI display's signal off (the monitor goes to standby), for an app that
+                                lets the screen sleep. The console is taken out of graphics mode first if an app
+                                draws on it, which the app redraws when it wakes the screen
+  app-request screen-wake       turns it on again (and the console back into graphics mode for an app that draws on it)
   app-request settings          prints {"time_zone", "ntp", "wifi_fallback", "wifi_ssid", "display": {"connected",
-                                "rotation"}} as JSON
+                                "hdmi", "rotation"}} as JSON
   app-request restart           restarts the Pi
   app-request setup             restarts the Pi into setup mode, keeping its settings until new ones are saved there
                                 (to rename it, or change its Wi-Fi or SSH keys)
@@ -30,6 +34,7 @@ else, as root (sudo, in /etc/sudoers.d/020_juggle-app); each request is checked 
                                 those is the app's own reset.
 """
 
+import fcntl
 import importlib.util
 import json
 import os
@@ -50,6 +55,10 @@ NTP_CONF = Path("/run/systemd/timesyncd.conf.d/juggle.conf")
 # A host name or an IPv4 or IPv6 address
 SERVER = re.compile(r"[A-Za-z0-9]([A-Za-z0-9.:-]{0,251}[A-Za-z0-9])?")
 LARGEST_UPDATE = 64 * 1024 * 1024
+# An app that draws on the screen has the console in graphics mode (see app: DISPLAY)
+DISPLAY = Path("/run/juggle/display")
+TTY = "/dev/tty1"
+KDSETMODE, KD_TEXT, KD_GRAPHICS = 0x4B3A, 0x00, 0x01
 
 
 class RequestError(Exception):
@@ -159,6 +168,19 @@ def update():
     print("The update has started: the app restarts with it")
 
 
+def screen(action):
+    """An HDMI display off ("sleep") or on ("wake"): the console blanks it (DPMS), which it does only in text mode, so
+    an app that draws on the screen has the console put into text mode first and back into graphics mode after."""
+    drawing = DISPLAY.exists()
+    with open(TTY, "r+b", buffering=0) as tty:
+        if action == "sleep" and drawing:
+            fcntl.ioctl(tty, KDSETMODE, KD_TEXT)
+        subprocess.run(["setterm", "--blank", "force" if action == "sleep" else "poke", "--term", "linux"],
+                       stdin=tty, stdout=tty, check=True)
+        if action == "wake" and drawing:
+            fcntl.ioctl(tty, KDSETMODE, KD_GRAPHICS)
+
+
 def main():
     args = sys.argv[1:]
     try:
@@ -201,6 +223,8 @@ def main():
             rules.apply_display(rotation)
             os.sync()
             print(f"Display rotation: {rotation} degrees, from the next start")
+        elif args in (["screen-sleep"], ["screen-wake"]):
+            screen(args[0].split("-")[1])
         elif args == ["settings"]:
             rules = settings_rules()
             settings = json.loads(SETTINGS.read_text(encoding="utf-8"))
@@ -208,6 +232,7 @@ def main():
                               "wifi_fallback": rules.wifi_fallback(settings),
                               "wifi_ssid": (settings.get("wifi") or {}).get("ssid"),
                               "display": {"connected": rules.display_connected(),
+                                          "hdmi": rules.display_hdmi(),
                                           "rotation": rules.display_rotation()}}))
         elif args == ["restart"]:
             subprocess.run(["systemctl", "reboot"], check=True)

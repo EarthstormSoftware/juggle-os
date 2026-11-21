@@ -4,8 +4,8 @@ What a Juggle app can rely on: how it's installed and run, what it may read and 
 what it may ask the OS for. From v1.0 this is what Juggle OS's version number protects. Everything not written here
 (the card layout, the A/B slots, `os-update`, the setup page, the login screens) may change in any release.
 
-**Status: Juggle 1.1.** Frozen at 1.0 from Juggle OS v1.0: 1.x releases only add to it (see Versions), and 1.1 adds
-the display (an app may draw on it, with Pillow, and turn it). What led up to 1.0 is under Before v1.
+**Status: Juggle 1.2.** Frozen at 1.0 from Juggle OS v1.0: 1.x releases only add to it (see Versions), 1.1 adds
+the display (an app may draw on it, with Pillow, and turn it), and 1.2 lets an HDMI screen sleep. What led up to 1.0 is under Before v1.
 
 ## Versions
 
@@ -70,7 +70,7 @@ partition has the rest of the card, less the OS's own settings.
 - **User**: `app` (uid and gid 800), in the groups `gpio`, `i2c`, `spi`, `video`, `input` and `dialout`, and allowed
   to listen on ports below 1024. `root: true` runs it as root instead.
 - **Environment**: `PYTHONPATH=/data/app/lib`, `PYTHONUNBUFFERED=1`, `PYTHONDONTWRITEBYTECODE=1`,
-  `JUGGLE_STATE=/data/app-state`, `HOME=/data/app-state`, and `JUGGLE`, the contract the OS gives (`"1.1"`).
+  `JUGGLE_STATE=/data/app-state`, `HOME=/data/app-state`, and `JUGGLE`, the contract the OS gives (`"1.2"`).
 - **Its web page** is on port 80, at `http://<name>.local`, by convention (`juggle` and App Base expect it there).
   Nothing else on the Pi listens on 80. The app may listen on other ports too, on IPv4 and IPv6.
 - **Restarts**: whenever it stops, after 5 seconds, however often. Exit status 78 means "don't restart me" (a
@@ -124,13 +124,15 @@ v1.0 they came in Juggle OS 0.4 to 0.6).
 | `time-zone <zone>` | 1.0 | Sets the time zone (an IANA name, such as `Europe/London`), at once and at every start | |
 | `ntp <server>` | 1.0 | Sets the time server (`""` for the default) | |
 | `restart` | 1.0 | Restarts the Pi | |
-| `settings` | 1.0 | The Pi's settings | `{"time_zone", "ntp", "wifi_fallback": {"enabled", "after_minutes", "for_minutes"}, "wifi_ssid", "display": {"connected", "rotation"}}` (`wifi_ssid` null on Ethernet; `display` since 1.1: whether a DSI display is connected, and its rotation) |
+| `settings` | 1.0 | The Pi's settings | `{"time_zone", "ntp", "wifi_fallback": {"enabled", "after_minutes", "for_minutes"}, "wifi_ssid", "display": {"connected", "hdmi", "rotation"}}` (`wifi_ssid` null on Ethernet; `display` since 1.1: whether a DSI display is connected, and its rotation; `hdmi` since 1.2: whether an HDMI monitor is connected, from its EDID, as the connector says connected whatever is plugged in) |
 | `wifi-fallback <on\|off> <after> <for>` | 1.0 | Whether the Pi starts setup mode when it has no network, after how many minutes (1 to 1440) and for how many (5 to 120), from the next start | |
 | `setup` | 1.0 | Restarts into setup mode, keeping the settings until new ones are saved there | |
 | `factory-reset` | 1.0 | Forgets the Pi's settings (name, Wi-Fi, SSH keys, time zone) and restarts into setup mode. The app and its state stay, and the display's rotation. | |
 | `wifi <ssid> [<country>]` | 1.0 | A new Wi-Fi network from the next start, the password on standard input (one line). On trial: if it doesn't connect within 5 minutes, the network before goes back. The app asks for the restart. | |
 | `networks` | 1.0 | The Wi-Fi networks in range | a JSON list of names, strongest first |
 | `display-rotation <0\|90\|180\|270>` | 1.1 | Turns the display's picture clockwise by so many degrees, its touch screen with it, from the next start (the app asks for the restart). For the official 7" Touch Display (1): the console and the touch screen turn; an app drawing straight to the screen turns its own drawing by `rotation` in `settings`. Kept through OS updates and a factory reset. | |
+| `screen-sleep` | 1.2 | Turns an HDMI display's signal off, so the monitor goes to standby (a DSI display's backlight is the app's own, in `/sys/class/backlight`). If the app draws on the screen (`display`), the console is taken out of graphics mode first, and the picture is gone: the app redraws it after `screen-wake` | |
+| `screen-wake` | 1.2 | Turns the HDMI display on again, and puts the console back into graphics mode for an app that draws on it | |
 
 ## Installing and removing (for deploy tools)
 

@@ -286,6 +286,18 @@ display_rotation() {
 	fi
 }
 
+# The app may put an HDMI screen to sleep and wake it (app-request screen-sleep and screen-wake, from Juggle 1.2); the
+# console ends up in text mode again, and settings says whether a monitor is there
+screen_requests() {
+	local request=(sudo -n -u app sudo -n /usr/lib/juggle/app-request)
+	"${request[@]}" settings | python3 -c 'import json, sys; assert isinstance(json.load(sys.stdin)["display"]["hdmi"], bool)' ||
+		{ echo "settings doesn't say whether an HDMI display is connected"; return 1; }
+	"${request[@]}" screen-sleep || { echo "screen-sleep failed"; return 1; }
+	"${request[@]}" screen-wake || { echo "screen-wake failed"; return 1; }
+	"${request[@]}" screen-nap 2> /dev/null && { echo "it took a request that isn't one"; return 1; }
+	return 0
+}
+
 echo
 echo "== Checks"
 result=0
@@ -319,5 +331,6 @@ check juggle_needed "an app that doesn't say which Juggle OS it needs, or needs 
 [ "$mode" = qemu ] && check display_app "an app that draws on the screen has it to itself, and gives it back"
 check app_requests "the app may ask app-request, and only that"
 check display_rotation "the app may turn the display, into the boot files and back"
+check screen_requests "the app may put an HDMI screen to sleep and wake it"
 check backlight "the app may dim and switch off the display (if there is one)"
 exit $result

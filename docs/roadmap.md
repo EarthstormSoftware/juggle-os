@@ -585,10 +585,16 @@ the Pi (not asked when flashing).
     DSI = backlight 0 and back; HDMI = leave graphics mode and `setterm --blank force`, then `poke`, graphics mode,
     and the app redraws. A display is there if its connector is DSI, or its HDMI EDID is non-empty. The input that
     wakes the screen does nothing else.
-  - **Two owners of the screen, one setting and one module**: an app with `display: true` gets `Screen` from App Base
-    (Pi-only code in `pi.py`, so Picos are unaffected; the HA panel's own copy goes); with no display app running,
-    a small OS service does the same for the console (logo and login screen included), with `setterm`.
-  - Order: App Base's `Screen`, then the HA panel on it, then the OS service and the setting in the image.
+  - **One owner, the app** (changed 2026-11-21, no OS service): every Pi runs an app with App Base and its settings
+    page, and an app may read input devices, so App Base's `Screen` (Pi-only code in `pi.py`, so Picos are unaffected)
+    runs the idle timer for a display app (its own touches) and for a console one (any input device, the console's
+    logo and login screen blank too). The OS only does what needs root: `app-request screen-sleep` and `screen-wake`
+    (HDMI: text mode, `setterm --blank force`; wake: `poke`, graphics mode for a display app), and `settings` says
+    whether an HDMI monitor is there (`display.hdmi`, from the EDID). Juggle 1.2.
+  - Order, done on branches (not pushed): App Base's `Screen`; the HA panel on it, deployed to the Purple Pi (sleep
+    and touch wake checked); the OS requests and the 1.2 contract (checked on the Pi 2 in console and in graphics
+    mode). To do: App Base's input watcher for a console app, the Screen section on the settings page, the image
+    build and QEMU test, then a tagged App Base and the HA panel on it.
   - **HDMI spike, done 2026-11-21 on a Pi 2 with an HDMI monitor and a USB keyboard** (kernel 6.18):
     `sudo setterm --blank force|poke --term linux` on tty1 (redirect inside the sudo shell) switches the HDMI signal
     off and on (`/sys/class/drm/card0-HDMI-A-1/dpms` reads Off/On; the monitor went to standby and came back).

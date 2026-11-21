@@ -232,6 +232,18 @@ def display_connected() -> bool:
     return any(status.read_text().strip() == "connected" for status in DRM.glob("card*-DSI-*/status"))
 
 
+def display_hdmi() -> bool:
+    """Whether an HDMI display is connected. Its connector says "connected" whatever is plugged in (HDMI is forced on,
+    so the Pi starts with no monitor), but only a monitor gives an EDID."""
+    for edid in DRM.glob("card*-HDMI-A-*/edid"):
+        try:
+            if len(edid.read_bytes()) >= 128:
+                return True
+        except OSError:
+            pass
+    return False
+
+
 def rotated_cmdline(cmdline: str, rotation: int) -> str:
     """A kernel command line with the console and the boot splash turned by rotation (and any turn they had taken
     out)."""
