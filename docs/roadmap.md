@@ -576,10 +576,11 @@ the Pi (not asked when flashing).
   blanks the console (`consoleblank=0` on the command line, so a screen never looks dead). Some screens need to sleep
   (burn-in), and it must be the same for every display (DSI, HDMI) and every app. One rule: a screen only sleeps if
   something can wake it (an input device is present: touch, keyboard or mouse; otherwise it stays on and logs why).
-  - **One setting for every Pi**, `screen`: `timeout_minutes` (0: never; the default for the console, so v1.1's
-    behaviour stays) and `brightness` (percent, only where there's a backlight). The names are the HA panel's, which
-    already has them, so it moves over. Set from an app's settings page or `juggle`; the device setting wins over an
-    app's manifest default (the HA panel keeps 5 minutes there). A `juggle` command wakes a sleeping screen over SSH.
+  - **One setting for every Pi**, `screen`: `timeout_minutes` (default **5** for every Pi, decided 2026-11-21; 0 is
+    never) and `brightness` (percent, only where there's a backlight). The names are the HA panel's, which already
+    has them, so it moves over. An app that needs the screen on all the time gives the setting a default of 0 in its
+    own settings. The screen still only sleeps where something can wake it, so a Pi with a monitor and no keyboard
+    stays on. This changes v1.1's never-blank console, so the release notes say so. A `juggle` command wakes a sleeping screen over SSH.
     No `schedule` or `always_on` modes: one timeout covers burn-in; a schedule can come if it's asked for.
   - **One `Screen` helper that hides the display type** (`sleep()`, `wake()`, `touched()`, and whether one exists):
     DSI = backlight 0 and back; HDMI = leave graphics mode and `setterm --blank force`, then `poke`, graphics mode,
