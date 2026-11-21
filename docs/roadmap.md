@@ -583,4 +583,14 @@ the Pi (not asked when flashing).
   drawing straight to the framebuffer isn't blanked by the console, so it must do it itself. A `juggle` command wakes
   a sleeping screen over SSH. Spike first on a Pi: how the screen goes off (HDMI: DPMS through vc4, DSI: the
   backlight, and whether the official touch display's touch controller can wake it).
+  - **HDMI spike, done 2026-11-21 on a Pi 2 with an HDMI monitor and a USB keyboard** (kernel 6.18):
+    `sudo setterm --blank force|poke --term linux` on tty1 (redirect inside the sudo shell) switches the HDMI signal
+    off and on (`/sys/class/drm/card0-HDMI-A-1/dpms` reads Off/On; the monitor went to standby and came back).
+    `setterm --blank 1` blanked it after about 62 s, and a key press woke it. `consoleblank` is read-only at
+    runtime (`/sys/module/kernel/parameters/consoleblank`, mode 0444), so the "replace the command line value"
+    idea is out: `consoleblank=0` stays as the default and a boot step applies `setterm --blank N` (minutes, minimum
+    1) to tty1 from the `screen` setting, with no `config.txt` rewrite or restart. `schedule` can use `force` and
+    `poke` from a timer (not tested yet). `setterm` only affects the text console, so an app drawing to the
+    framebuffer blanks and wakes itself. Still to check: the connector's `status` with the monitor unplugged
+    (`vc4.force_hotplug=1` may make it always say `connected`), and a DSI display.
 - The other Pi 2s, as uses come up.
