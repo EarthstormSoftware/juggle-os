@@ -19,11 +19,12 @@ as a Pico W, with Python, the network, USB and GPIO.
 - **No serial cable or screen needed:** the card is flashed from Windows with the Pi's name, Wi-Fi and SSH key, so it
   comes up on the network ready for SSH. Or, written by any imager, it starts a setup hotspot, as a Pico does.
 
-> **Status:** v1.1.0 runs on the Pi 2: set up with the Juggle Flash app or `juggle flash` on Windows or Linux (from a
+> **Status:** v1.2.0 runs on the Pi 2: set up with the Juggle Flash app or `juggle flash` on Windows or Linux (from a
 > published image, or one you built) or from a phone in setup mode, updated over SSH from Juggle Flash or with
 > `juggle update` (A/B slots, going back by itself if a new OS doesn't start properly, hangs or loses power on
 > trial), and running one app, deployed from its own repo, which can ask the OS for a few things (its own updates,
-> the clock, a restart, setup mode, a new Wi-Fi network on trial, and the display's rotation). What apps can rely on is
+> the clock, a restart, setup mode, a new Wi-Fi network on trial, the display's rotation, and putting an HDMI screen to sleep and waking it; every Pi's screen sleeps after 5
+> minutes untouched by default, and `juggle wake` wakes it over SSH). What apps can rely on is
 > [the app contract](docs/app-contract.md), frozen at 1.0: 1.x releases only add to it. See the
 > [roadmap](docs/roadmap.md) for the design and the steps.
 
