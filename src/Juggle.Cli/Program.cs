@@ -27,6 +27,8 @@ static class Program
                                 Update a Pi's OS over SSH (the image as for flash). The new OS
                                 goes into the slot that isn't running, and the Pi restarts into it once; it keeps it
                                 if it starts properly, and otherwise goes back to the OS it had. --yes doesn't ask.
+          juggle wake [name]    Wake a Pi's sleeping screen over SSH (Juggle OS 1.2 screens sleep after 5 minutes
+                                by default).
           juggle forget <name>  Forget a Pi you no longer use: its saved settings and host key, and ssh's known host.
           juggle default [name] Make a Pi the default: new Pis start from its settings, whichever was set up last.
                                 Without a name, say which Pi new ones start from.
@@ -57,6 +59,8 @@ static class Program
                 ["flash"] => Flash(null, eject),
                 ["flash", var image] => Flash(image, eject),
                 ["update", .. var rest] when rest.Count(arg => arg != "--yes") <= 2 => Update(rest),
+                ["wake"] => ExitCode(new WakeJob(Host).Run(null)),
+                ["wake", var name] => ExitCode(new WakeJob(Host).Run(name)),
                 ["forget", var name] => ExitCode(new ForgetJob(Host).Run(name)),
                 ["default"] => ExitCode(new DefaultJob(Host).Run(null)),
                 ["default", var name] => ExitCode(new DefaultJob(Host).Run(name)),

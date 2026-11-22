@@ -580,7 +580,7 @@ the Pi (not asked when flashing).
     never) and `brightness` (percent, only where there's a backlight). The names are the HA panel's, which already
     has them, so it moves over. An app that needs the screen on all the time gives the setting a default of 0 in its
     own settings. The screen still only sleeps where something can wake it, so a Pi with a monitor and no keyboard
-    stays on. This changes v1.1's never-blank console, so the release notes say so. A `juggle` command wakes a sleeping screen over SSH.
+    stays on. This changes v1.1's never-blank console, so the release notes say so. `juggle wake [name]` wakes a sleeping screen over SSH (done).
     No `schedule` or `always_on` modes: one timeout covers burn-in; a schedule can come if it's asked for.
   - **One `Screen` helper that hides the display type** (`sleep()`, `wake()`, `touched()`, and whether one exists):
     DSI = backlight 0 and back; HDMI = leave graphics mode and `setterm --blank force`, then `poke`, graphics mode,
